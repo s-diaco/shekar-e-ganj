@@ -11,6 +11,8 @@ SLEEP_SCROLL_TIME = 2
 TOTAL_SCROLL_TIME = 300
 PRODUCT_PAGE_LOAD_TIME = 2
 MAX_IMAGE_LOAD_RETRIES = 2
+# Enter page address
+dynamic_url = "https://www.digikala.com/search/category-printed-book-of-philosophy-and-psychology/?sort=7"
 
 
 # %% Helper functions
@@ -74,8 +76,6 @@ def scroll_down_gradual(driver):
 options = Options()
 options.add_argument("--headless=new")
 driver = webdriver.Chrome(options=options)
-# Enter page address
-dynamic_url = "https://www.digikala.com/search/category-printed-book-of-philosophy-and-psychology/?sort=7"
 driver.get(dynamic_url)
 print("Headless Chrome Initialized")
 print("waiting to load product list")
