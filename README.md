@@ -8,9 +8,7 @@ A simple web scraping script for a local competition.
 Run in container terminal:
 
 3. sudo apt-get update
-4. sudo apt-get install -y google-chrome-stable
-5. sudo apk add py-pip
-6. python3 -m venv venv
-7. . venv/bin/activate
-# 8. sudo apk add gcc python3-dev musl-dev linux-headers
-9. pip3 install -r requirements.txt
+4. sudo apt-get install chromium-driver
+5. python3 -m venv venv
+6. . venv/bin/activate
+7. pip3 install -r requirements.txt

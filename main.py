@@ -12,7 +12,9 @@ TOTAL_SCROLL_TIME = 300
 PRODUCT_PAGE_LOAD_TIME = 2
 MAX_IMAGE_LOAD_RETRIES = 2
 # Enter page address
-dynamic_url = "https://www.digikala.com/search/category-printed-book-of-philosophy-and-psychology/?sort=7"
+dynamic_url = (
+    "https://www.digikala.com/search/category-home-and-kitchen/product-list/?sort=25"
+)
 
 
 # %% Helper functions
@@ -97,6 +99,8 @@ print(*all_links, sep="\n")
 
 # %% load every product page and get photo addresses
 photo_list = []
+unavailable_images = 0
+loaded_images = 0
 for link in all_links:
     product_url = f"https://www.digikala.com{link}"
     product_code = product_url[product_url.find("/product/") + len("/product/") :]
@@ -117,29 +121,27 @@ for link in all_links:
     print(f"{len(product_pics)} photos found for product {link}.")
     print(*product_pics, sep="\n")
     photo_list += product_pics
+    # load and print images
+    for img_data in product_pics:
+        (product_code, image_url) = img_data
+        print(f"Photo for: {product_code}:")
+        attempts = 0
+        while True:
+            try:
+                image = imread(image_url)
+                plt.imshow(image)
+                plt.show()
+                loaded_images += 1
+                break
+            except:
+                if attempts > MAX_IMAGE_LOAD_RETRIES:
+                    print(f"image load error for {product_code}")
+                    unavailable_images += 1
+                    break
+                else:
+                    attempts += 1
 # %% Clean up selenium driver
 driver.quit()
-# %% load and print images
-unavailable_images = 0
-loaded_images = 0
-for img_data in photo_list:
-    (product_code, image_url) = img_data
-    print(f"Photo for: {product_code}:")
-    attempts = 0
-    while True:
-        try:
-            image = imread(image_url)
-            plt.imshow(image)
-            plt.show()
-            loaded_images += 1
-            break
-        except:
-            if attempts > MAX_IMAGE_LOAD_RETRIES:
-                print(f"image load error for {product_code}")
-                unavailable_images += 1
-                break
-            else:
-                attempts += 1
 
 # %% Print statistics
 print("Summary:")
