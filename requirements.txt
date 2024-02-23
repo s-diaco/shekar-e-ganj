@@ -1,5 +1,5 @@
 beautifulsoup4
-imageio==2.34.0
+imageio
 matplotlib
 selenium
 ipykernel
