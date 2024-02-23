@@ -6,7 +6,6 @@ from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 from imageio.v2 import imread
-import cv2
 import imagehash
 from PIL import Image
 
@@ -16,7 +15,8 @@ TOTAL_SCROLL_TIME = 300
 PRODUCT_PAGE_LOAD_TIME = 2
 MAX_IMAGE_LOAD_RETRIES = 2
 IMAGE_COLS = 2
-REF_IMAGE = "ref_images/galaxy.jpg"
+REF_IMAGE_PATH = "ref_images/galaxy.jpg"
+CUT_OFF = 5
 # Enter page address
 dynamic_url = "https://www.digikala.com/search/notebook-netbook-ultrabook/?sort=7"
 
@@ -83,22 +83,41 @@ def compare_tierce_images(pil_image):
     # pilImg = cv2.cvtColor(cv2Img, cv2.COLOR_BGR2RGB)
 
     # get first and last third of the image
-    # Get the average hashes of both images
-    hash0 = imagehash.average_hash(pil_image)
-    hash1 = imagehash.average_hash(Image.open(REF_IMAGE))
-    cutoff = 5  # Can be changed according to what works best for your images
+    w, h = pil_image.size
+    first_tierce = pil_image.crop((0, 0, w / 3, h / 3))
+    last_tierce = pil_image.crop((w * 0.66, h * 0.66, w, h))
 
-    hashDiff = hash0 - hash1  # Finds the distance between the hashes of images
-    if hashDiff < cutoff:
+    ref_image = Image.open(REF_IMAGE_PATH)
+
+    # get first and last third of the ref_image
+    w, h = ref_image.size
+    first_ref_tierce = ref_image.crop((0, 0, w / 3, h / 3))
+    last_ref_tierce = ref_image.crop((w * 0.66, h * 0.66, w, h))
+
+    # Get the average hashes of both images
+    hash00 = imagehash.average_hash(first_tierce)
+    hash01 = imagehash.average_hash(first_ref_tierce)
+    hashDiff = hash00 - hash01  # Finds the distance between the hashes of images
+    if hashDiff < CUT_OFF:
         print(f"These images are similar! hashdiff: {hashDiff}")
         return True
     else:
         print(f"Images are not similar. hashdiff: {hashDiff}")
-        return False
+
+    # Get the average hashes of both images
+    hash10 = imagehash.average_hash(last_tierce)
+    hash11 = imagehash.average_hash(last_ref_tierce)
+    hashDiff = hash10 - hash11  # Finds the distance between the hashes of images
+    if hashDiff < CUT_OFF:
+        print(f"Found similar images! hashdiff: {hashDiff}")
+        return True
+    else:
+        print(f"Images are not similar. hashdiff: {hashDiff}")
+    return False
 
 
 # %%
-test_img = Image.open("ref_images/iphone.jpg")
+test_img = Image.open("ref_images/galaxy_code.jpg")
 compare_tierce_images(test_img)
 # %% load the list page with all products
 options = Options()
@@ -121,7 +140,7 @@ all_links = []
 links = dynamic_soup.find_all("a", {"class": ["block", "cursor-pointer"]})
 all_links = [link["href"] for link in links if "product" in link["href"]]
 print(f"found {len(all_links)} products:")
-print(*all_links, sep="\n")
+# print(*all_links, sep="\n")
 
 
 # %% load every product page and get photo addresses
@@ -151,15 +170,17 @@ for link in all_links:
     # load and print images
     for img_data in product_pics:
         (product_code, image_url) = img_data
-        print(f"Photo for: {product_code}:")
+        print(f"Loading Photo for: {product_code}:")
         attempts = 0
         while True:
             try:
                 # plt.figure(figsize=(3, 3))
                 image = imread(image_url)
-                imageio.imwrite(f"images/{product_code}.jpg", image)
-                cv2Img = cv2.imread(f"images/{product_code}.jpg", 0)
-                if compare_tierce_images(cv2Img):
+                # imageio.imwrite(f"images/{product_code}.jpg", image)
+                # pimage = Image.open(f"images/{product_code}.jpg")
+                pil_image = Image.fromarray(image)
+                if compare_tierce_images(pil_image=pil_image):
+                    imageio.imwrite(f"images/{product_code}.jpg", image)
                     plt.imshow(image)
                     # plt.axis("off")
                     # plt.subplot(1, 2, loaded_images % IMAGE_COLS + 1)
@@ -168,10 +189,11 @@ for link in all_links:
                 break
             except:
                 if attempts > MAX_IMAGE_LOAD_RETRIES:
-                    print(f"image load error for {product_code}")
+                    print(f"image load error for {product_code}. Loading Noxt Image...")
                     unavailable_images += 1
                     break
                 else:
+                    print(f"image load error for {product_code}. retrying...")
                     attempts += 1
 # %% Clean up selenium driver
 driver.quit()
