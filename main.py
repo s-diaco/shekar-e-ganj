@@ -15,9 +15,9 @@ TOTAL_SCROLL_TIME = 300
 PRODUCT_PAGE_LOAD_TIME = 2
 MAX_IMAGE_LOAD_RETRIES = 2
 REF_IMAGE_PATH = "ref_images/galaxy.jpg"
-CUT_OFF = 5
+HASHDIFF_CUT_OFF = 5
 START_PAGE = 1
-TOTAL_PAGES = 20
+TOTAL_PAGES = 2
 
 # Enter page address
 dynamic_url = "https://www.digikala.com/search/notebook-netbook-ultrabook/?sort=7"
@@ -27,15 +27,19 @@ dynamic_url = "https://www.digikala.com/search/notebook-netbook-ultrabook/?sort=
 
 
 def get_product_urls(driver, dynamic_url: str, start_page=None, num_pages=None):
-    all_links = []
+    all_product_links = []
     if num_pages is None:
         driver.get(dynamic_url)
         print("waiting to load product list")
         # time.sleep(20)
         links = scroll_down_gradual(driver=driver)
-        all_links = [link["href"] for link in links if "product" in link["href"]]
-        print(f"found {len(all_links)} products.")
-        get_product_images(driver=driver, product_codes=all_links)
+        all_product_links = [
+            link["href"] for link in links if "product" in link["href"]
+        ]
+        print(f"found {len(all_product_links)} products.")
+        photo_list, loaded_images, unavailable_images = get_product_images(
+            driver=driver, product_codes=all_product_links
+        )
     else:
         for page_no in range(1, num_pages + 1):
             driver.get(f"{dynamic_url}&page={page_no}")
@@ -43,11 +47,13 @@ def get_product_urls(driver, dynamic_url: str, start_page=None, num_pages=None):
             # time.sleep(20)
             links = scroll_down_gradual(driver=driver)
             new_links = [link["href"] for link in links if "product" in link["href"]]
-            all_links += new_links
-            print(f"found {len(links)} new products. Total: {len(all_links)}")
-            get_product_images(driver=driver, product_codes=new_links)
+            all_product_links += new_links
+            print(f"found {len(links)} new products. Total: {len(all_product_links)}")
+            photo_list, loaded_images, unavailable_images = get_product_images(
+                driver=driver, product_codes=new_links
+            )
     # print(*all_links, sep="\n")
-    return all_links
+    return all_product_links, photo_list, loaded_images, unavailable_images
 
 
 def scroll_down(driver):
@@ -134,22 +140,22 @@ def compare_tierce_images(pil_image):
     # Get the average hashes of both images
     hash00 = imagehash.average_hash(first_tierce)
     hash01 = imagehash.average_hash(first_ref_tierce)
-    hashDiff = hash00 - hash01  # Finds the distance between the hashes of images
-    if hashDiff < CUT_OFF:
-        print(f"These images are similar! hashdiff: {hashDiff}")
+    hash_diff = hash00 - hash01  # Finds the distance between the hashes of images
+    if hash_diff < HASHDIFF_CUT_OFF:
+        print(f"These images are similar! hashdiff: {hash_diff}")
         return True
     else:
-        print(f"Images are not similar. hashdiff: {hashDiff}")
+        print(f"Images are not similar. hashdiff: {hash_diff}")
 
     # Get the average hashes of both images
     hash10 = imagehash.average_hash(last_tierce)
     hash11 = imagehash.average_hash(last_ref_tierce)
-    hashDiff = hash10 - hash11  # Finds the distance between the hashes of images
-    if hashDiff < CUT_OFF:
-        print(f"Found similar images! hashdiff: {hashDiff}")
+    hash_diff = hash10 - hash11  # Finds the distance between the hashes of images
+    if hash_diff < HASHDIFF_CUT_OFF:
+        print(f"Found similar images! hashdiff: {hash_diff}")
         return True
     else:
-        print(f"Images are not similar. hashdiff: {hashDiff}")
+        print(f"Images are not similar. hashdiff: {hash_diff}")
     return False
 
 
@@ -217,6 +223,7 @@ def get_product_images(driver, product_codes: list):
                     else:
                         print(f"image load error for {product_code}. retrying...")
                         attempts += 1
+    return photo_list, loaded_images, unavailable_images
 
 
 # %%
@@ -226,11 +233,15 @@ def get_product_images(driver, product_codes: list):
 # %% start
 options = Options()
 options.add_argument("--headless=new")
+# options.binary_location='/usr/bin/chromedriver'
 driver = webdriver.Chrome(options=options)
 print("Headless Chrome Initialized")
 
-product_codes = get_product_urls(
-    driver=driver, dynamic_url=dynamic_url, start_page=START_PAGE, num_pages=TOTAL_PAGES
+product_codes, photo_list, loaded_images, unavailable_images = get_product_urls(
+    driver=driver,
+    dynamic_url=dynamic_url,
+    start_page=START_PAGE,
+    num_pages=TOTAL_PAGES,
 )
 # %% Clean up selenium driver
 driver.quit()
@@ -238,8 +249,8 @@ driver.quit()
 # %% Print statistics
 print("Summary:")
 print(f"Total products found: {len(product_codes)}")
-# print(f"Total product images: {len(photo_list)}")
-# print(f"Images loaded:        {loaded_images}")
-# print(f"Images not loaded:    {unavailable_images}")
+print(f"Total product images: {len(photo_list)}")
+print(f"Images loaded:        {loaded_images}")
+print(f"Images not loaded:    {unavailable_images}")
 
 # %%
