@@ -14,7 +14,6 @@ SLEEP_SCROLL_TIME = 2
 TOTAL_SCROLL_TIME = 300
 PRODUCT_PAGE_LOAD_TIME = 2
 MAX_IMAGE_LOAD_RETRIES = 2
-IMAGE_COLS = 2
 REF_IMAGE_PATH = "ref_images/galaxy.jpg"
 CUT_OFF = 5
 START_PAGE = 1
@@ -200,7 +199,6 @@ def get_product_images(driver, product_codes: list):
                             image.save(f"images/{product_code}.jpg")
                             # plt.imshow(image)
                             # plt.axis("off")
-                            # plt.subplot(1, 2, loaded_images % IMAGE_COLS + 1)
                             # plt.show()
                             display(image)
                         else:
