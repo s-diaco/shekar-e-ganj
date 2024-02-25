@@ -1,11 +1,11 @@
 # %%
+from io import BytesIO
+import pathlib
 import time
-import imageio
+import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
-import matplotlib.pyplot as plt
-from imageio.v2 import imread
 import imagehash
 from PIL import Image
 
@@ -17,11 +17,40 @@ MAX_IMAGE_LOAD_RETRIES = 2
 IMAGE_COLS = 2
 REF_IMAGE_PATH = "ref_images/galaxy.jpg"
 CUT_OFF = 5
+START_PAGE = 1
+TOTAL_PAGES = 20
+
 # Enter page address
 dynamic_url = "https://www.digikala.com/search/notebook-netbook-ultrabook/?sort=7"
 
 
 # %% Helper functions
+
+
+def get_product_urls(driver, dynamic_url: str, start_page=None, num_pages=None):
+    all_links = []
+    if num_pages is None:
+        driver.get(dynamic_url)
+        print("waiting to load product list")
+        # time.sleep(20)
+        links = scroll_down_gradual(driver=driver)
+        all_links = [link["href"] for link in links if "product" in link["href"]]
+        print(f"found {len(all_links)} products.")
+        get_product_images(driver=driver, product_codes=all_links)
+    else:
+        for page_no in range(1, num_pages + 1):
+            driver.get(f"{dynamic_url}&page={page_no}")
+            print(f"Page {page_no}. waiting to load product list")
+            # time.sleep(20)
+            links = scroll_down_gradual(driver=driver)
+            new_links = [link["href"] for link in links if "product" in link["href"]]
+            all_links += new_links
+            print(f"found {len(links)} new products. Total: {len(all_links)}")
+            get_product_images(driver=driver, product_codes=new_links)
+    # print(*all_links, sep="\n")
+    return all_links
+
+
 def scroll_down(driver):
     """A method for scrolling the page."""
 
@@ -77,6 +106,15 @@ def scroll_down_gradual(driver):
         last_height = new_height
         total_time += SLEEP_SCROLL_TIME
 
+        # Get the page source (including JavaScript-rendered content)
+        page_source = driver.page_source
+
+        # Parse the page with Beautiful Soup
+        dynamic_soup = BeautifulSoup(page_source, "html.parser")
+        # links = soup.find_all("a", {"class": ["block", "cursor-pointer"]})
+        links = dynamic_soup.find_all("a", {"class": ["block", "cursor-pointer"]})
+        return links
+
 
 def compare_tierce_images(pil_image):
     # Convert cv2Img from OpenCV format to PIL format
@@ -116,93 +154,94 @@ def compare_tierce_images(pil_image):
     return False
 
 
+# %% load every product page and get photo addresses
+def get_product_images(driver, product_codes: list):
+    photo_list = []
+    unavailable_images = 0
+    loaded_images = 0
+    for link in product_codes:
+        product_url = f"https://www.digikala.com{link}"
+        product_code = product_url[product_url.find("/product/") + len("/product/") :]
+        product_code = product_code[: product_code.find("/")]
+        driver.get(product_url)
+        print("waiting to load product photos")
+        time.sleep(PRODUCT_PAGE_LOAD_TIME)
+        print("waiting ended.")
+        product_page = driver.page_source
+        product_soup = BeautifulSoup(product_page, "html.parser")
+        product_pics = []
+        pics = product_soup.find_all("img", {"class": ["w-full"]})
+        product_pics = [
+            (product_code, photo["src"])
+            for photo in pics
+            if "digikala-products" in photo["src"]
+        ]
+        print(f"{len(product_pics)} photos found for product {link}.")
+        print(*product_pics, sep="\n")
+        photo_list += product_pics
+        # load and print images
+        for img_data in product_pics:
+            (product_code, image_url) = img_data
+            print(f"Loading Photo for: {product_code}:")
+            attempts = 0
+            pathlib.Path("images").mkdir(parents=True, exist_ok=True)
+            pathlib.Path("images_not_matched").mkdir(parents=True, exist_ok=True)
+            while True:
+                try:
+                    response = requests.get(image_url)
+                    if response.status_code == 200:
+                        image_data = BytesIO(response.content)
+                        image = Image.open(image_data)
+                        # plt.figure(figsize=(3, 3))
+                        # image = imread(image_url)
+                        # pimage = Image.open(f"images/{product_code}.jpg")
+                        # pil_image = Image.fromarray(image)
+                        if compare_tierce_images(pil_image=image):
+                            image.save(f"images/{product_code}.jpg")
+                            # plt.imshow(image)
+                            # plt.axis("off")
+                            # plt.subplot(1, 2, loaded_images % IMAGE_COLS + 1)
+                            # plt.show()
+                            display(image)
+                        else:
+                            image.save(
+                                f"images_not_matched/img-{loaded_images}_{product_code}.jpg"
+                            )
+                        loaded_images += 1
+                        break
+                except:
+                    if attempts > MAX_IMAGE_LOAD_RETRIES:
+                        print(
+                            f"image load error for {product_code}. Loading Noxt Image..."
+                        )
+                        unavailable_images += 1
+                        break
+                    else:
+                        print(f"image load error for {product_code}. retrying...")
+                        attempts += 1
+
+
 # %%
-test_img = Image.open("ref_images/galaxy_code.jpg")
-compare_tierce_images(test_img)
-# %% load the list page with all products
+# test_img = Image.open("ref_images/galaxy_code.jpg")
+# compare_tierce_images(test_img)
+
+# %% start
 options = Options()
 options.add_argument("--headless=new")
 driver = webdriver.Chrome(options=options)
-driver.get(dynamic_url)
 print("Headless Chrome Initialized")
-print("waiting to load product list")
-# time.sleep(20)
-scroll_down_gradual(driver=driver)
-print("waiting ended.")
 
-# Get the page source (including JavaScript-rendered content)
-page_source = driver.page_source
-
-# Parse the page with Beautiful Soup
-dynamic_soup = BeautifulSoup(page_source, "html.parser")
-all_links = []
-# links = soup.find_all("a", {"class": ["block", "cursor-pointer"]})
-links = dynamic_soup.find_all("a", {"class": ["block", "cursor-pointer"]})
-all_links = [link["href"] for link in links if "product" in link["href"]]
-print(f"found {len(all_links)} products:")
-# print(*all_links, sep="\n")
-
-
-# %% load every product page and get photo addresses
-photo_list = []
-unavailable_images = 0
-loaded_images = 0
-for link in all_links:
-    product_url = f"https://www.digikala.com{link}"
-    product_code = product_url[product_url.find("/product/") + len("/product/") :]
-    product_code = product_code[: product_code.find("/")]
-    driver.get(product_url)
-    print("waiting to load product photos")
-    time.sleep(PRODUCT_PAGE_LOAD_TIME)
-    print("waiting ended.")
-    product_page = driver.page_source
-    product_soup = BeautifulSoup(product_page, "html.parser")
-    product_pics = []
-    pics = product_soup.find_all("img", {"class": ["w-full"]})
-    product_pics = [
-        (product_code, photo["src"])
-        for photo in pics
-        if "digikala-products" in photo["src"]
-    ]
-    print(f"{len(product_pics)} photos found for product {link}.")
-    print(*product_pics, sep="\n")
-    photo_list += product_pics
-    # load and print images
-    for img_data in product_pics:
-        (product_code, image_url) = img_data
-        print(f"Loading Photo for: {product_code}:")
-        attempts = 0
-        while True:
-            try:
-                # plt.figure(figsize=(3, 3))
-                image = imread(image_url)
-                # imageio.imwrite(f"images/{product_code}.jpg", image)
-                # pimage = Image.open(f"images/{product_code}.jpg")
-                pil_image = Image.fromarray(image)
-                if compare_tierce_images(pil_image=pil_image):
-                    imageio.imwrite(f"images/{product_code}.jpg", image)
-                    plt.imshow(image)
-                    # plt.axis("off")
-                    # plt.subplot(1, 2, loaded_images % IMAGE_COLS + 1)
-                    plt.show()
-                loaded_images += 1
-                break
-            except:
-                if attempts > MAX_IMAGE_LOAD_RETRIES:
-                    print(f"image load error for {product_code}. Loading Noxt Image...")
-                    unavailable_images += 1
-                    break
-                else:
-                    print(f"image load error for {product_code}. retrying...")
-                    attempts += 1
+product_codes = get_product_urls(
+    driver=driver, dynamic_url=dynamic_url, start_page=START_PAGE, num_pages=TOTAL_PAGES
+)
 # %% Clean up selenium driver
 driver.quit()
 
 # %% Print statistics
 print("Summary:")
-print(f"Total products found: {len(all_links)}")
-print(f"Total product images: {len(photo_list)}")
-print(f"Images loaded:        {loaded_images}")
-print(f"Images not loaded:    {unavailable_images}")
+print(f"Total products found: {len(product_codes)}")
+# print(f"Total product images: {len(photo_list)}")
+# print(f"Images loaded:        {loaded_images}")
+# print(f"Images not loaded:    {unavailable_images}")
 
 # %%

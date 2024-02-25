@@ -1,5 +1,5 @@
 beautifulsoup4
-imageio
 matplotlib
 selenium
 ipykernel
+imagehash

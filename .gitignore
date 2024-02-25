@@ -162,3 +162,7 @@ cython_debug/
 # Media files
 images/
 ref_images/
+images_not_matched/
+
+# MacOS
+.DS_Store
