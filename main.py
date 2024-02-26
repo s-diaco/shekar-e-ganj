@@ -10,9 +10,9 @@ import imagehash
 from PIL import Image
 
 # constants
-SLEEP_SCROLL_TIME = 2
+SLEEP_SCROLL_TIME = 5
 TOTAL_SCROLL_TIME = 300
-PRODUCT_PAGE_LOAD_TIME = 2
+PRODUCT_PAGE_LOAD_TIME = 5
 MAX_IMAGE_LOAD_RETRIES = 2
 REF_IMAGE_PATH = "ref_images/iphone.jpg"
 HASHDIFF_CUT_OFF = 5
@@ -20,7 +20,9 @@ START_PAGE = 1
 TOTAL_PAGES = 200
 
 # Enter page address
-dynamic_url = "https://www.digikala.com/search/notebook-netbook-ultrabook/?sort=7"
+dynamic_url = (
+    "https://www.digikala.com/search/category-home-and-kitchen/product-list/?sort=7"
+)
 
 
 # %% Helper functions
@@ -89,6 +91,7 @@ def scroll_down_gradual(driver):
 
     total_time = 0
     scroll_to = 1000
+    links = []
     while True:
         # Scroll down to the bottom.
         # driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -111,14 +114,14 @@ def scroll_down_gradual(driver):
         last_height = new_height
         total_time += SLEEP_SCROLL_TIME
 
-        # Get the page source (including JavaScript-rendered content)
-        page_source = driver.page_source
+    # Get the page source (including JavaScript-rendered content)
+    page_source = driver.page_source
 
-        # Parse the page with Beautiful Soup
-        dynamic_soup = BeautifulSoup(page_source, "html.parser")
-        # links = soup.find_all("a", {"class": ["block", "cursor-pointer"]})
-        links = dynamic_soup.find_all("a", {"class": ["block", "cursor-pointer"]})
-        return links
+    # Parse the page with Beautiful Soup
+    dynamic_soup = BeautifulSoup(page_source, "html.parser")
+    # links = soup.find_all("a", {"class": ["block", "cursor-pointer"]})
+    links = dynamic_soup.find_all("a", {"class": ["block", "cursor-pointer"]})
+    return links
 
 
 def compare_tierce_images(pil_image):
