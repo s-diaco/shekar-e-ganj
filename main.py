@@ -14,10 +14,10 @@ SLEEP_SCROLL_TIME = 2
 TOTAL_SCROLL_TIME = 300
 PRODUCT_PAGE_LOAD_TIME = 2
 MAX_IMAGE_LOAD_RETRIES = 2
-REF_IMAGE_PATH = "ref_images/galaxy.jpg"
+REF_IMAGE_PATH = "ref_images/iphone.jpg"
 HASHDIFF_CUT_OFF = 5
 START_PAGE = 1
-TOTAL_PAGES = 2
+TOTAL_PAGES = 200
 
 # Enter page address
 dynamic_url = "https://www.digikala.com/search/notebook-netbook-ultrabook/?sort=7"
