@@ -10,14 +10,14 @@ import imagehash
 from PIL import Image
 
 # constants
-SLEEP_SCROLL_TIME = 5
+SLEEP_SCROLL_TIME = 3
 TOTAL_SCROLL_TIME = 300
-PRODUCT_PAGE_LOAD_TIME = 5
+PRODUCT_PAGE_LOAD_TIME = 2
 MAX_IMAGE_LOAD_RETRIES = 2
 REF_IMAGE_PATH = "ref_images/iphone.jpg"
 HASHDIFF_CUT_OFF = 5
 START_PAGE = 1
-TOTAL_PAGES = 200
+TOTAL_PAGES = 5
 
 # Enter page address
 dynamic_url = (
